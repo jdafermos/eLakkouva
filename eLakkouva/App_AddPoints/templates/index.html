@@ -1,0 +1,261 @@
+﻿<html>
+
+    {% load static %}
+    {% load leaflet_tags %}
+
+<head>
+
+    {% leaflet_js %}
+    {% leaflet_css %}
+
+    <title>e-Lakkouva</title>
+
+    <style type="text/css">
+        #gis {position: absolute; width:100%; height:100%; margin:0; padding:0; top:0; bottom:0; right:0; left:0;}
+    </style>
+      
+    <link rel="stylesheet" type="text/css" href="{% static 'CSS/eLakkouva.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'leaflet_glc/leaflet.groupedlayercontrol.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'font_awesome/css/font-awesome.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'leaflet_awesome_markers/leaflet.awesome-markers.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'leaflet_mouse_position/L.Control.MousePosition.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'leaflet_easy_button/easy-button.css' %}" />
+
+    <script type="text/javascript" src="{% static 'leaflet_ajax/leaflet.ajax.js' %}"> </script>
+    <script type="text/javascript" src="{% static 'leaflet_glc/leaflet.groupedlayercontrol.min.js' %}"> </script>
+    <script type="text/javascript" src="{% static 'leaflet_awesome_markers/leaflet.awesome-markers.js' %}"> </script>
+    <script type="text/javascript" src="{% static 'leaflet_mouse_position/L.Control.MousePosition.js' %}"> </script>
+    <script type="text/javascript" src="{% static 'leaflet_easy_button/easy-button.js' %}"> </script>
+    <script type="text/javascript" src="{% static 'jquery/jquery-3.2.1.min.js' %}"> </script>
+
+</head>
+
+<script type="text/javascript">
+
+    // Toggle the status of the Submit button when the user selects a category from the drop-down menu
+    function onOptionChange() {
+        var theLayerValue = L.DomUtil.get('field_layer').value;
+
+        if (theLayerValue != 'layer_none') {
+            L.DomUtil.get('button_submit').disabled = false;
+        } else if (theLayerValue == 'layer_none') {
+            L.DomUtil.get('button_submit').disabled = true;
+        }
+    }
+
+</script>
+
+<body>
+
+    <script type="text/javascript">
+
+        function ShowLayers(theMap, theOptions) {
+
+            // Set a marker style for newly added Points
+            var theNewMarkerIcon = L.AwesomeMarkers.icon({
+                icon: 'cog',
+                prefix: 'fa',
+                markerColor: 'cadetblue',
+                iconColor: 'white',
+                spin: false
+            });
+
+            // Set a marker style for Pits
+            var thePitMarkerIcon = L.AwesomeMarkers.icon({
+                icon: 'warning',
+                prefix: 'fa',
+                markerColor: 'red',
+                iconColor: 'white',
+                spin: false
+            });
+
+            // Set a marker style for Light Bulbs
+            var theBulbMarkerIcon = L.AwesomeMarkers.icon({
+                icon: 'lightbulb-o',
+                prefix: 'fa',
+                markerColor: 'orange',
+                iconColor: 'white',
+                spin: false
+            });
+
+            // Set a marker style for Water Leaks
+            var theLeakMarkerIcon = L.AwesomeMarkers.icon({
+                icon: 'hourglass-end',
+                prefix: 'fa',
+                markerColor: 'blue',
+                iconColor: 'white',
+                spin: false
+            });
+
+            // Display the Pits that exist in the database with their own styling and popup information window
+            var thePitsDatasetView = new L.GeoJSON.AJAX("{% url 'thePitsDatasetViewURL' %}",{
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {icon: thePitMarkerIcon});
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.Comment.toString());
+                }
+            });
+            thePitsDatasetView.addTo(theMap);
+
+            // Display the Light Bulbs that exist in the database with their own styling and popup information window
+            var theBulbsDatasetView = new L.GeoJSON.AJAX("{% url 'theBulbsDatasetViewURL' %}",{
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {icon: theBulbMarkerIcon});
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.Comment.toString());
+                }
+            });
+            theBulbsDatasetView.addTo(theMap);
+
+            // Display the Water Leaks that exist in the database with their own styling and popup information window
+            var theLeaksDatasetView = new L.GeoJSON.AJAX("{% url 'theLeaksDatasetViewURL' %}",{
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {icon: theLeakMarkerIcon});
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties.Comment.toString());
+                }
+            });
+            theLeaksDatasetView.addTo(theMap);
+
+            // Setup variables and options for the Grouped Layer Control
+            var theOSMTileLayer = 'http://{s}.tile.openstreetmap.org/{z}{y}{x}.png';
+
+            var theBaseLayers = {
+                "OSM Basemap": theOSMTileLayer
+            };
+
+            var theGroupedOverlays = {
+                "Layers": {
+                    "Road Pits": thePitsDatasetView,
+                    "Light Bulbs": theBulbsDatasetView,
+                    "Water Leaks": theLeaksDatasetView
+                }
+            };
+
+            var theGLCOptions = {
+                // Make the "OSM Basemap" group exclusive (use radio inputs)
+                exclusiveGroups: ["OSM Basemap"],
+                // Show a checkbox next to non-exclusive group labels for toggling all
+                groupCheckboxes: true
+            };
+
+            // Use the custom grouped layer control, not "L.control.layers"
+            L.control.groupedLayers(theBaseLayers, theGroupedOverlays, theGLCOptions).addTo(theMap);
+
+            // Add a Mouse Position coordinates box to the map
+            L.control.mousePosition({
+                position: 'bottomright',
+                separator: ' / ',
+                lngFirst: true,
+                lngFormatter: function(num) {
+                    var theDegreesIntegerPart = Math.trunc(num);
+                    var theDegreesDecimalPart = Math.abs(num - theDegreesIntegerPart);
+                    var theMinutes = theDegreesDecimalPart * 60;
+                    var theMinutesIntegerPart = Math.trunc(theMinutes);
+                    var theMinutesDecimalPart = theMinutes - theMinutesIntegerPart;
+                    var theSeconds = theMinutesDecimalPart * 60;
+                    var theSecondsIntegerPart = Math.trunc(theSeconds);
+                    var theSecondsDecimalPart = theSeconds - theSecondsIntegerPart;
+                    var theSecondsDecimalPartFormatted = Math.round(theSecondsDecimalPart*10);
+                    var theFormattedValue = theDegreesIntegerPart + 'o'.sup() + theMinutesIntegerPart + "'" + theSecondsIntegerPart + "''." + theSecondsDecimalPartFormatted;
+                    return theFormattedValue; 
+                },
+                latFormatter: function(num) {
+                    var theDegreesIntegerPart = Math.trunc(num);
+                    var theDegreesDecimalPart = Math.abs(num - theDegreesIntegerPart);
+                    var theMinutes = theDegreesDecimalPart * 60;
+                    var theMinutesIntegerPart = Math.trunc(theMinutes);
+                    var theMinutesDecimalPart = theMinutes - theMinutesIntegerPart;
+                    var theSeconds = theMinutesDecimalPart * 60;
+                    var theSecondsIntegerPart = Math.trunc(theSeconds);
+                    var theSecondsDecimalPart = theSeconds - theSecondsIntegerPart;
+                    var theSecondsDecimalPartFormatted = Math.round(theSecondsDecimalPart*10);
+                    var theFormattedValue = theDegreesIntegerPart + 'o'.sup() + theMinutesIntegerPart + "'" + theSecondsIntegerPart + "''." + theSecondsDecimalPartFormatted;
+                    return theFormattedValue; 
+                },
+                prefix: "WGS'84 Lon/Lat: "
+            }).addTo(theMap);
+
+            // Add a Button for adding new Points to the map's database
+            function addNewMarker(e){
+                var theNewMarker = L.marker(e.latlng, {icon: theNewMarkerIcon}).addTo(theMap);
+                theNewMarker.dragging.enable();
+
+                var theCsrfToken = "{% csrf_token %}";
+                var thePopupFormContent =
+                    '<form id="form_popup" name="p_form_popup" action="{% url 'thePopupViewURL' %}" method="post">' + theCsrfToken +
+                        '<div class="DivContainer">' +
+                            '<fieldset>' +
+                                '<legend>New point:</legend>' +
+                                '<input id="field_lon" name="p_field_lon" class="PopupInput" readonly>' +
+                                '<input id="field_lat" name="p_field_lat" class="PopupInput" readonly>' +
+                                'Comment: <input type="text" id="field_comment" name="p_field_comment"><br/>' +
+                                '<label><b><font color="red">*</font></b>Category: </label>' +
+                                '<select id="field_layer" name="p_field_layer" class="PopupOption" onchange="onOptionChange();">' +
+                                    '<option value="layer_none" selected="selected"> </option>' +
+                                    '<option value="layer_pits">Road Pit</option>' +
+                                    '<option value="layer_bulbs">Light Bulb</option>' +
+                                    '<option value="layer_leaks">Water Leak</option>' +
+                                '</select>' +
+                            '</fieldset>' +
+                        '</div>' +
+                        '<div class="DivButton">' +
+                            '<button type="submit" id="button_submit" class="PopupButton" disabled>Submit</button>' +
+                            '<button type="button" id="button_remove" class="PopupButton">Remove</button>' +
+                            '<button type="button" id="button_close" class="PopupButton">Close</button>' +
+                        '</div>' +
+                    '</form>';
+                theNewMarker.bindPopup(thePopupFormContent);
+                theNewMarker.bindTooltip("Click to submit, drag to move");
+
+                // Control what happens when the user interacts with the popup form
+                theNewMarker.on('click', function(e) {
+                    // First, update the popup window form with the new marker's coordinate info
+                    var theLon = e.latlng.lng;
+                    var theLat = e.latlng.lat;
+                    L.DomUtil.get('field_lon').value = theLon;
+                    L.DomUtil.get('field_lat').value = theLat;
+
+                    // When the user clicks the Remove button
+                    L.DomEvent.addListener(L.DomUtil.get('button_remove'), 'click', function() {
+                        theMap.removeLayer(e.target);
+                        theAddPointButton.enable();
+                        $('.leaflet-container').css('cursor','');
+                    });
+
+                    // When the user clicks the Close button
+                    L.DomEvent.addListener(L.DomUtil.get('button_close'), 'click', function() {
+                        theNewMarker.closePopup();
+                    });
+                });
+            }
+
+            // Make the Button for adding new points
+            var theAddPointButton = L.easyButton({
+                states: [{
+                    stateName: 'State_AddPoint',
+                    icon: 'fa-pencil',
+                    title: 'Add a new point',
+                    onClick: function(btn, map) {
+                        btn.disable();
+                        $('.leaflet-container').css('cursor','crosshair');
+                        theMap.once('click', addNewMarker);
+                    }
+                }]
+            });
+
+            // Add the button to the map
+            theAddPointButton.addTo(theMap);
+
+        }
+
+    </script>
+
+    {% leaflet_map "gis" callback="window.ShowLayers" %}
+
+</body>
+
+</html>

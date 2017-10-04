@@ -1,0 +1,23 @@
+.DivContainer{
+	text-align: left;
+	color: black;
+	max-height: auto;
+	vertical-align: middle;
+}
+
+.PopupInput{
+	display: none;
+}
+
+.PopupOption{
+	height: auto;
+	width: auto;
+}
+
+.DivButton{
+	text-align: center;
+}
+
+.PopupButton{
+	text-align: center;
+}

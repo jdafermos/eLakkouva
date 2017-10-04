@@ -1,0 +1,11 @@
+PLUGINS
+app_settings
+BaseGeometryWidget
+unicode_literals
+LooseVersion
+LeafletWidget
+get_version
+validators
+PLUGIN_FORMS
+slugify
+forms
